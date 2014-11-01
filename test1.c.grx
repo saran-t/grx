@@ -1,0 +1,28 @@
+@stencil1[d1cen4]
+	@points[	-2,	-1,	1,	2]
+	@weights[1/12., -8/12., 8/12., -1/12.]
+@end
+
+@stencil2[d2cen4]
+	@stencil1[d1cen4]
+	@points[-2, -1, 0, 1, 2]
+	@weights[-1/12., 16/12., -30/12., 16/12., -1/12.]
+@end
+
+// First derivatives
+@for[i, j=i.., k]
+	const double dh~i~j~k~ = @d1[d1cen4, h~i~j~[[x#]], k];
+	const double da~i~j~k~ = @d1[d1cen4, a~i~j~[[x#]], k];
+@end
+
+// Second derivatives
+@for[i, j=i.., k, l=k..]
+	const double ddh~i~j~k~l~ = @d2[d2cen4, h~i~j~[[x#]], k, l];
+	#define ddh~i~j~l~k~ ddh~i~j~k~l~
+	#define ddh~j~i~k~l~ ddh~i~j~k~l~
+	#define ddh~j~i~l~k~ ddh~i~j~k~l~
+@end
+
+@for[i, j, k:j..]
+	const double gamma~i~j~k = 0.5 * @sum[l] guu~i~l * (gll~j~l~k + gll~k~l~j - gll~j~k~l) @end;
+@end
