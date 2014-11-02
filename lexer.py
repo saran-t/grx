@@ -59,15 +59,15 @@ class TagToken(object):
 		self.args = args
 
 	def print_debug(self, prefix = ''):
-		print repr(self.line) + ':' + repr(self.char) + ':\t' + prefix + '@' + self.name
+		print repr(self.line) + ':' + repr(self.char) + ':\t' + prefix + ' @' + self.name
 		prefix = prefix + '>>>>'
 		for arg in self.args:
-			print repr(arg[0].line) + ':' + repr(arg[0].char) + ':\t' + prefix + ' [ TagArg ]'
+			print repr(arg[0].line) + ':' + repr(arg[0].char) + ':\t' + prefix + ' [[ TagArg ]]'
 			for token in arg:
 				token.print_debug(prefix + '>>>>')
 
 	def __repr__(self):
-		return '<@' + self.name + repr(self.args) + '>'
+		return '<@' + self.name + '[' + repr(self.args) + ']>'
 
 
 class LexerState(object):
@@ -93,12 +93,7 @@ class Lexer(object):
 		self.tokens.append(token)
 
 	def get_tokens(self):
-		if len(self.tokens) == 0:
-			return None
-		elif len(self.tokens) == 1:
-			return self.tokens[0]
-		else:
-			return TokensSequence(self.tokens)
+		return TokensSequence(self.tokens)
 
 	def advance(self):
 		if self.chars_read < len(self.string):
@@ -142,7 +137,7 @@ def lex_text(lexer):
 
 	class InnerState(object):
 		TEXT = 0
-		ARRAYEXPAND_WAIT = 1
+		OPENBRACKET_WAIT = 1
 
 	inner_state = InnerState.TEXT
 
@@ -152,13 +147,13 @@ def lex_text(lexer):
 			lexer.state = LexerState.TAG
 
 		elif lexer.char == '[':
-			if inner_state == InnerState.ARRAYEXPAND_WAIT:
+			if inner_state == InnerState.OPENBRACKET_WAIT:
 				lexer.state = LexerState.ARRAYEXPAND
 			else:
-				inner_state = InnerState.ARRAYEXPAND_WAIT
+				inner_state = InnerState.OPENBRACKET_WAIT
 				
 		else:
-			if inner_state == InnerState.ARRAYEXPAND_WAIT:
+			if inner_state == InnerState.OPENBRACKET_WAIT:
 				text = text + '[' + lexer.char
 				inner_state = InnerState.TEXT
 			else:
@@ -180,41 +175,53 @@ def lex_arrayexpand(lexer):
 
 	class InnerState(object):
 		READ = 0
-		CLOSE_WAIT = 1
+		OPENBRACKET_WAIT = 1
+		CLOSEBRACKET_WAIT = 2
+		DONE = 3
 
 	inner_state = InnerState.READ
 	opencount = 0
 
-	while (lexer.state == LexerState.ARRAYEXPAND):
+	while (inner_state != InnerState.DONE):
 
-		if lexer.char is None:
+		if not lexer.char:
 			raise Exception('Error: ' + str(line_number) + ':' + str(char_pos - 2) + ': missing a closing ]]')
 
-		if lexer.char == '[':
-			text = text + lexer.char
-			opencount = opencount + 1
+		if inner_state == InnerState.READ:
 
-		elif lexer.char == ']':
-			if opencount > 0:
-				text = text + lexer.char
-				opencount = opencount - 1
-			elif inner_state == InnerState.CLOSE_WAIT:
-				lexer.state = LexerState.TEXT
+			if lexer.char == '[':
+				inner_state = InnerState.OPENBRACKET_WAIT
+			elif lexer.char == ']':
+				inner_state = InnerState.CLOSEBRACKET_WAIT
 			else:
-				inner_state = InnerState.CLOSE_WAIT
+				text = text + lexer.char
 
-		else:
-			if inner_state == InnerState.CLOSE_WAIT:
+		elif inner_state == InnerState.OPENBRACKET_WAIT:
+
+			if lexer.char == '[':
+				opencount = opencount + 1
+
+			text = text + '[' + lexer.char
+			inner_state = InnerState.READ
+
+		elif inner_state == InnerState.CLOSEBRACKET_WAIT:
+
+			if lexer.char == ']':
+				if opencount > 0:
+					text = text + ']]'
+					opencount = opencount - 1
+				else:
+					inner_state = InnerState.DONE
+			else:
 				text = text + ']' + lexer.char
 				inner_state = InnerState.READ
-			else:
-				text = text + lexer.char
 
 		lexer.advance()
 	
 	# Process the expansion string as if it were a separate GRX document
 	inner_tokens = lex(text, line_number, char_pos)
 	lexer.append_token(ArrayExpandToken(line_number, char_pos - 2, inner_tokens))
+	lexer.state = LexerState.TEXT
 
 
 # Lex an @tag
@@ -226,22 +233,42 @@ def lex_tag(lexer):
 	line_number = lexer.line_number
 	char_pos = lexer.char_pos
 
+	class InnerState(object):
+		READ = 0
+		OPENBRACKET_WAIT = 1
+		DONE = 2
+
+	inner_state = InnerState.READ
+
 	# Match only [a-zA-Z0-9_] for a tag name
 	tagname = re.compile(r"\w")
 
-	while (lexer.state == LexerState.TAG) and (lexer.char is not None):
+	while (inner_state != InnerState.DONE) and (lexer.char is not None):
 
-		if tagname.match(lexer.char) is not None:
-			name = name + lexer.char
-			lexer.advance()
-		
-		else:
+		if inner_state == InnerState.READ:
+			if tagname.match(lexer.char):
+				name = name + lexer.char
+				lexer.advance()
+			elif lexer.char == '[':
+				inner_state = InnerState.OPENBRACKET_WAIT
+				lexer.advance()
+			else:
+				inner_state = InnerState.DONE
+
+		elif inner_state == InnerState.OPENBRACKET_WAIT:
 			if lexer.char == '[':
 				args = lex_tag_args(lexer.advance())
+				inner_state = InnerState.DONE
+			else:
+				# This should be safe here. But don't try this elsewhere!
+				lexer.char = '['
+				lexer.chars_read = lexer.chars_read - 1
+				lexer.char_pos = lexer.char_pos - 1
 
-			lexer.state = LexerState.TEXT
+				inner_state = InnerState.DONE
 		
 	lexer.append_token(TagToken(line_number, char_pos - 1, name, args))
+	lexer.state = LexerState.TEXT
 
 
 # Lex arguments list for an @tag
@@ -258,27 +285,53 @@ def lex_tag_args(lexer):
 	arg_line = lexer.line_number
 	arg_char = lexer.char_pos
 
-	while opencount >= 0:
+	class InnerState(object):
+		READ = 0
+		OPENBRACKET_WAIT = 1
+		CLOSEBRACKET_WAIT = 2
+		DONE = 3
 
-		if lexer.char is None:
+	inner_state = InnerState.READ
+
+	while inner_state != InnerState.DONE:
+
+		if not lexer.char:
 			raise Exception('Error: ' + str(start_line) + ':' + str(start_char - 1) + ': @tag argument list is missing a closing ]')
 
 		param_fully_read = False
 
-		# Need this to handle nested [...] inside our arguments list
-		if lexer.char == '[':
-			opencount = opencount + 1
+		if inner_state == InnerState.READ:
 
-		elif lexer.char == ']':
-			if opencount == 0:
-				# Genuine end of arguments list, treat whatever string we have in the buffer as the last argument
+			if lexer.char == '[':
+				inner_state = InnerState.OPENBRACKET_WAIT
+			elif lexer.char == ']':
+				inner_state = InnerState.CLOSEBRACKET_WAIT
+			elif (lexer.char == ',') and (opencount == 0):
 				param_fully_read = True
+			else:
+				string = string + lexer.char
 
-			opencount = opencount - 1
+		elif inner_state == InnerState.OPENBRACKET_WAIT:
 
-		# Commas appearing inside inner brackets are NOT argument delimiters!
-		elif (lexer.char == ',') and (opencount == 0):
-			param_fully_read = True
+			if lexer.char == '[':
+				opencount = opencount + 1
+			
+			string = string + '[' + lexer.char
+			inner_state = InnerState.READ
+
+		elif inner_state == InnerState.CLOSEBRACKET_WAIT:
+
+			if lexer.char == ']':
+				if opencount > 0:
+					opencount = opencount - 1
+					string = string + ']]'
+					inner_state = InnerState.READ
+				else:
+					param_fully_read = True
+					inner_state = InnerState.DONE
+			else:
+				string = string + ']' + lexer.char
+				inner_state = InnerState.READ
 
 		if param_fully_read:
 
@@ -294,7 +347,6 @@ def lex_tag_args(lexer):
 
 		else:
 			# Keep reading into the current argument string
-			string = string + lexer.char
 			lexer.advance()
 
 	return args
