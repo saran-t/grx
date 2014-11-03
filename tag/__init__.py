@@ -23,9 +23,11 @@ def create_token(line, char, name, args = []):
 
 
 class ExtendedTagContext(parser.ParsingContext):
-	# dummy class to enable @end tag
-	pass
-	
+	# subclass to enable @end tag
+	def __init__(self, tokens, parent, tagtoken):
+		parser.ParsingContext.__init__(self, tokens, parent)
+		self.tagtoken = tagtoken
+
 class TagToken(lexer.AbstractToken):
 	def __init__(self, line, char, name, args = []):
 		self.line = line

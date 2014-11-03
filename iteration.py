@@ -3,7 +3,7 @@ import text
 import re
 
 # Produces <before> <content_0> [<content_i> <between>] <content_n> <after>
-class IterationBlock(object):
+class IterationBlock(parser.AbstractBlock):
 
 	def __init__(self, counter, content, before = '', between = '', after = ''):
 		self.counter = counter

@@ -1,18 +1,16 @@
 import re
-from lexer import AbstractToken
-from parser import ParsingContext, AbstractBlock, BlockSequence
-
-tilde = re.compile(r"~")
+import lexer
+import parser
 
 
 def blockify(content):
-	if isinstance(content, AbstractBlock):
+	if isinstance(content, parser.AbstractBlock):
 		return content
 	else:
 		return TextBlock(content)
 
 
-class PlainStringContext(ParsingContext):
+class PlainStringContext(parser.ParsingContext):
 
 	def parse_all(self):
 		text = ''
@@ -26,7 +24,11 @@ class PlainStringContext(ParsingContext):
 		return text
 
 
-class TextToken(AbstractToken):
+class TextToken(lexer.AbstractToken):
+
+	split_char = '`'
+	split_regex = re.compile(split_char)
+
 	def __init__(self, line, char, text):
 		self.line = line
 		self.char = char
@@ -35,19 +37,19 @@ class TextToken(AbstractToken):
 	def parse(self, context):
 		blocks = []
 
-		pieces = tilde.split(self.text)
+		pieces = TextToken.split_regex.split(self.text)
 		for piece in pieces:
 
 			var = context.getvar(piece)
 			if var is None:
 				if len(blocks) > 0 and isinstance(blocks[-1], TextBlock):
-					blocks[-1].append('~').append(piece)
+					blocks[-1].append(split_char).append(piece)
 				else:
 					blocks.append(TextBlock(piece))
 			else:
 				blocks.append(var)
 
-		context.append_block(BlockSequence(blocks))
+		context.append_block(parser.BlockSequence(blocks))
 
 	def __repr__(self):
 		return '<TextToken>'
@@ -56,7 +58,7 @@ class TextToken(AbstractToken):
 		print repr(self.line) + ':' + repr(self.char) + ':\t' + prefix + self.text
 
 
-class TextBlock(AbstractBlock):
+class TextBlock(parser.AbstractBlock):
 	content = ''
 
 	def __init__(self, content):

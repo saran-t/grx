@@ -7,12 +7,17 @@ from iteration import IterationBlock
 def token_class():
 	return SumTagToken
 
+'''
+@sum generates a "Sigma" expression
+'''
+class SumTagToken(repeat.AbstractIterationTagToken):
 
-class SumTagToken(repeat.AbstractRepeatTagToken):
-
+	'''
+	Surrounds each iterated copy of the content with (...), stick + between them, then surrounds the whole result with another (...) for safety
+	'''
 	def parse(self, context):
 	
-		(counters, content) = repeat.AbstractRepeatTagToken.parse(self, context)
+		(counters, content) = repeat.AbstractIterationTagToken.parse(self, context)
 		
 		#  we put this here since we still need to process the inner content up to @end even for an empty range!
 		if len(counters) == 0:

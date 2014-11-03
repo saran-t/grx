@@ -11,7 +11,7 @@ def parse(tokens):
 		print traceback.format_exc()
 		token = iterator_stack[-1].current()
 		raise Exception('Error: ' + str(token.line) + ':' + str(token.char) + ': ' + str(e.message))
-
+	
 
 class AbstractVariable(object):
 	def uniquename(self):
@@ -23,8 +23,6 @@ class AbstractBlock(object):
 
 
 class BlockSequence(AbstractBlock):
-
-	blocks = []
 	
 	def __init__(self, blocks):
 		self.blocks = blocks
@@ -40,10 +38,9 @@ class BlockSequence(AbstractBlock):
 
 class ParsingContext(object):
 
-	_localvars = {}
-
 	def __init__(self, tokens, parent = None):
 		self.parent = parent
+		self._localvars = {}
 
 		if isinstance(tokens, TokenIterator):
 			self.tokens_iterator = tokens

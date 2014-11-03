@@ -45,9 +45,10 @@ class ArrayExpandContext(parser.ParsingContext):
 
 	def parse_token(context, token):
 		import text
+		split_char = text.TextToken.split_char
 		if isinstance(token, text.TextToken):
 			# replace hash with an internal iteration variable name
-			filtered_token = text.TextToken(token.line, token.char, token.text.replace('#', '~' + context.countername + '~'))
-			return text.parse_token(context, filtered_token)
+			filtered_token = text.TextToken(token.line, token.char, token.text.replace('#', split_char + context.countername + split_char))
+			return filtered_token.parse(context)
 		else:
 			return parser.ParsingContext.parse_token(context, token)
