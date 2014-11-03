@@ -4,13 +4,15 @@ def lex(string):
 	lexer = Lexer(string, start_line = 1, start_char = 1)
 	return lexer.lex()
 
-class TokensSequence(object):
+class AbstractToken(object):
+	pass
+
+class TokenSequence(AbstractToken):
 	def __init__(self, tokens):
 		self.tokens = tokens
-
-	def print_debug(self):
-		for token in self:
-			token.print_debug()
+		if len(self.tokens) > 0:
+			self.line = self.tokens[0].line
+			self.char = self.tokens[0].char
 
 	def __iter__(self):
 		return iter(self.tokens)
@@ -25,53 +27,11 @@ class TokensSequence(object):
 		return len(self.tokens)
 
 	def __repr__(self):
-		return 'TokensSequence' + repr(self.tokens)
+		return '<TokenSequence[' + repr(len(self.tokens)) + ']>'
 
-class TextToken(object):
-	def __init__(self, line, char, text):
-		self.line = line
-		self.char = char
-		self.text = text
-
-	def print_debug(self, prefix = ''):
-		print repr(self.line) + ':' + repr(self.char) + ':\t' + prefix + ' ' + self.text
-
-	def __repr__(self):
-		return '<TextToken>'
-
-
-class ArrayExpandToken(object):
-	def __init__(self, line, char, inner_tokens):
-		self.line = line
-		self.char = char
-		self.inner_tokens = inner_tokens
-
-	def print_debug(self, prefix = ''):
-		print repr(self.line) + ':' + repr(self.char) + ':\t' + prefix + ' [[ ArrayExpand ]]'
-		for token in self.inner_tokens:
-			token.print_debug(prefix + '>>>>')
-
-	def __repr__(self):
-		return '<[[' + repr(self.inner_tokens) + ']]>'
-
-
-class TagToken(object):
-	def __init__(self, line, char, name, args = []):
-		self.line = line
-		self.char = char
-		self.name = name
-		self.args = args
-
-	def print_debug(self, prefix = ''):
-		print repr(self.line) + ':' + repr(self.char) + ':\t' + prefix + ' @' + self.name
-		prefix = prefix + '>>>>'
-		for arg in self.args:
-			print repr(arg[0].line) + ':' + repr(arg[0].char) + ':\t' + prefix + ' [[ TagArg ]]'
-			for token in arg:
-				token.print_debug(prefix + '>>>>')
-
-	def __repr__(self):
-		return '<@' + self.name + '[' + repr(self.args) + ']>'
+	def print_debug(self):
+		for token in self:
+			token.print_debug()
 
 
 class Lexer(object):
@@ -128,7 +88,7 @@ class Lexer(object):
 				lexer.lex_arrayexpand()
 			elif lexer.state == Lexer.State.TAG:
 				lexer.lex_tag()
-		return TokensSequence(lexer.tokens)
+		return TokenSequence(lexer.tokens)
 
 
 	# Lex an inert blob of text
@@ -174,6 +134,7 @@ class Lexer(object):
 			lexer.advance()
 
 		if len(string) > 0:
+			from text import TextToken
 			lexer.append_token(TextToken(start_line, start_char, string))
 
 
@@ -222,6 +183,7 @@ class Lexer(object):
 					if opencount > 0:
 						string = string + ']]'
 						opencount = opencount - 1
+						inner_state = InnerState.READ
 					else:
 						inner_state = InnerState.DONE
 				else:
@@ -231,6 +193,7 @@ class Lexer(object):
 			lexer.advance()
 		
 		# Process the expansion string as if it were a separate GRX document
+		from arrayexpand import ArrayExpandToken
 		inner_tokens = Lexer(string, start_line = line_number, start_char = char_pos).lex()
 		lexer.append_token(ArrayExpandToken(line_number, char_pos - 2, inner_tokens))
 		lexer.state = Lexer.State.TEXT
@@ -279,7 +242,8 @@ class Lexer(object):
 
 					inner_state = InnerState.DONE
 			
-		lexer.append_token(TagToken(line_number, char_pos - 1, name, args))
+		import tag
+		lexer.append_token(tag.create_token(line_number, char_pos - 1, name, args))
 		lexer.state = Lexer.State.TEXT
 
 

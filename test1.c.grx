@@ -25,4 +25,5 @@
 
 @tensor[[i, j, k:j..]]
 	const double gamma~i~j~k = 0.5 * @sum[[l]] guu~i~l * (gll~j~l~k + gll~k~l~j - gll~j~k~l) @end;
+	[[x#]]
 @end[]
