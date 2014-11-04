@@ -1,7 +1,0 @@
-@defaultrange[[1,3]]
-
-@repeat[[i, j, k=j..b]]
-	const double gamma~i~j~k~ = 0.5 * @sum[[l]] guu~i~l~ * (dg~j~l~k~ + dg~k~l~j~ - dg~j~k~l~) @end;
-
-	#define gamma~i~k~j~ gamma~i~j~k~
-@end
