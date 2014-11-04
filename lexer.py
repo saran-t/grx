@@ -202,6 +202,8 @@ class Lexer(object):
 	# Lex an @tag
 	def lex_tag(lexer):
 
+		import tag
+
 		name = ''
 		args = []
 
@@ -218,6 +220,7 @@ class Lexer(object):
 		# Match only [a-zA-Z0-9_] for a tag name
 		tagname = re.compile(r"\w")
 
+
 		while (inner_state != InnerState.DONE) and (lexer.char is not None):
 
 			if inner_state == InnerState.READ:
@@ -232,7 +235,7 @@ class Lexer(object):
 
 			elif inner_state == InnerState.OPENBRACKET_WAIT:
 				if lexer.char == '[':
-					args = lexer.advance().lex_tag_args()
+					args = lexer.advance().lex_tag_args(split = tag.token_class(name)._lexer_split_args())
 					inner_state = InnerState.DONE
 				else:
 					# This should be safe here. But don't try this elsewhere!
@@ -242,13 +245,13 @@ class Lexer(object):
 
 					inner_state = InnerState.DONE
 			
-		import tag
+		
 		lexer.append_token(tag.create_token(line_number, char_pos - 1, name, args))
 		lexer.state = Lexer.State.TEXT
 
 
 	# Lex arguments list for an @tag
-	def lex_tag_args(lexer):
+	def lex_tag_args(lexer, split = True):
 
 		args = []
 
@@ -282,7 +285,7 @@ class Lexer(object):
 					inner_state = InnerState.OPENBRACKET_WAIT
 				elif lexer.char == ']':
 					inner_state = InnerState.CLOSEBRACKET_WAIT
-				elif (lexer.char == ',') and (opencount == 0):
+				elif split and (lexer.char == ',') and (opencount == 0):
 					param_fully_read = True
 				else:
 					string = string + lexer.char

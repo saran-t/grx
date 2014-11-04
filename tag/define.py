@@ -22,8 +22,7 @@ class DefineTagToken(tag.TagToken):
 
 			matchblock = parser.ParsingContext(self.args[0], context).parse()
 			replaceblock = parser.ParsingContext(self.args[1], context).parse()
-			context.append_block(substitution.DefinitionBlock(env, matchblock, replaceblock))
-			
+			return substitution.DefinitionBlock(env, matchblock, replaceblock)	
 			
 
 class DefineScopeContext(tag.ExtendedTagContext):

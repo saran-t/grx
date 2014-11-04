@@ -12,14 +12,11 @@ def token_class(tagname):
 		try:
 			return __import__('tag', globals(), locals(), [tagname], -1).__getattribute__(tagname).token_class()
 		except Exception:
-			return None
+			return TagToken
 
 
 def create_token(line, char, name, args = []):
-	if token_class(name):
-		return token_class(name)(line, char, name, args)
-	else:
-		return TagToken(line, char, name, args)
+	return token_class(name)(line, char, name, args)
 
 
 class ExtendedTagContext(parser.ParsingContext):
@@ -28,12 +25,19 @@ class ExtendedTagContext(parser.ParsingContext):
 		parser.ParsingContext.__init__(self, tokens, parent)
 		self.tagtoken = tagtoken
 
+
 class TagToken(lexer.AbstractToken):
 	def __init__(self, line, char, name, args = []):
 		self.line = line
 		self.char = char
 		self.name = name
 		self.args = args
+
+	# The default behaviour is for the lexer to split argumentst list at commas
+	# override this for special tags (e.g. @expand)
+	@staticmethod
+	def _lexer_split_args():
+		return True
 
 	def parse(self, context):
 		raise Exception('unknown tag @' + self.name)

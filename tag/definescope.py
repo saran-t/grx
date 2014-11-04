@@ -11,7 +11,7 @@ class DefineScopeTagToken(tag.TagToken):
 	def parse(self, context):
 		inner_context = DefineScopeContext(iter(context), context, self)
 		content = inner_context.parse()
-		context.append_block(substitution.SubstitutionBlock(inner_context._defineenv, content))
+		return substitution.SubstitutionBlock(inner_context._defineenv, content)
 
 
 class DefineScopeContext(tag.ExtendedTagContext):

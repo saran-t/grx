@@ -88,14 +88,16 @@ class ParsingContext(object):
 
 		for token in self.tokens_iterator:
 			try:
-				self.parse_token(token)
+				block = self.parse_token(token)
+				if block is not None:
+					self._blocks.append(block)
 			except LeaveContext:
 				break
 
 		return BlockSequence(self._blocks)
 
 	def parse_token(self, token):
-		token.parse(self)
+		return token.parse(self)
 
 
 class TokenIterator(object):

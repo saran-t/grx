@@ -43,13 +43,13 @@ class TextToken(lexer.AbstractToken):
 			var = context.getvar(piece)
 			if var is None:
 				if len(blocks) > 0 and isinstance(blocks[-1], TextBlock):
-					blocks[-1].append(split_char).append(piece)
+					blocks[-1].append(TextToken.split_char).append(piece)
 				else:
 					blocks.append(TextBlock(piece))
 			else:
 				blocks.append(var)
 
-		context.append_block(parser.BlockSequence(blocks))
+		return parser.BlockSequence(blocks)
 
 	def __repr__(self):
 		return '<TextToken>'

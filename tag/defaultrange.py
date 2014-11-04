@@ -14,6 +14,7 @@ class DefaultRangeTagToken(tag.TagToken):
 
 		context.defaultrange = [start, end]
 
+
 class NonNegativeIntegerContext(text.PlainStringContext):
 	def parse_all(self):
 		numstring = text.PlainStringContext.parse_all(self)
@@ -26,3 +27,4 @@ class NonNegativeIntegerContext(text.PlainStringContext):
 			raise ValueError('expected a non-negative integer')
 
 		return num
+		

@@ -55,18 +55,20 @@ class IterationConstant(parser.AbstractVariable):
 
 class IterationCounter(parser.AbstractVariable):
 
-	def __init__(self, start, end):
+	def __init__(self, start, end, stride = 1):
 		self.active = False
 
 		if isinstance(start, parser.AbstractVariable):
-			self._start = start
+			self.start = start
 		else:
-			self._start = IterationConstant.get(start)
+			self.start = IterationConstant.get(start)
 
 		if isinstance(end, parser.AbstractVariable):
-			self._end = end
+			self.end = end
 		else:
-			self._end = IterationConstant.get(end)
+			self.end = IterationConstant.get(end)
+
+		self.stride = stride
 
 	def value(self):
 		return self._value
@@ -76,15 +78,15 @@ class IterationCounter(parser.AbstractVariable):
 			raise Exception(repr(self) + " this iteration counter is already active")
 		else:
 			self.active = True
-			self._value = self._start.value() - 1
+			self._value = self.start.value() - self.stride
 			return self
 
 	def hasnext(self):
-		return self._value < self._end.value()
+		return self._value < self.end.value()
 
 	def next(self):
-		self._value = self._value + 1
-		if self._value <= self._end.value():
+		self._value = self._value + self.stride
+		if (self.stride > 0 and self._value <= self.end.value()) or (self.stride < 0 and self._value >= self.end.value()):
 			return self._value
 		else:
 			self.active = False

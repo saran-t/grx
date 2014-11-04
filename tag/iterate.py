@@ -2,12 +2,12 @@ import tag
 import iteration
 
 def token_class():
-	return RepeatTagToken
+	return IterateTagToken
 
 '''
-Represents general iteration-type tags (e.g. @repeat, @sum)
+Represents general iterator tags (e.g. @iterate, @sum)
 '''
-class AbstractIterationTagToken(tag.TagToken):
+class AbstractIteratorToken(tag.TagToken):
 
 	'''
 	General parsing logic for iteration-type tags
@@ -28,17 +28,18 @@ class AbstractIterationTagToken(tag.TagToken):
 
 		return (counters, content)
 
+
 '''
-@repeat is a straightforward iteration tag that just repeats its content while incrementing the counter
+@iterate is a straightforward iterator tag that just repeats its content while incrementing the counter
 '''
-class RepeatTagToken(AbstractIterationTagToken):
+class IterateTagToken(AbstractIteratorToken):
 
 	'''
-	Takes the output from AbstractIterationTagToken and stick it straight into an IterationBlock
+	Takes the output from AbstractExpansionToken and stick it straight into an IterationBlock
 	'''
 	def parse(self, context):
 	
-		(counters, content) = AbstractIterationTagToken.parse(self, context)
+		(counters, content) = AbstractIteratorToken.parse(self, context)
 		
 		#  we put this here since we still need to process the inner content up to @end even for an empty range!
 		if len(counters) == 0:
@@ -47,5 +48,5 @@ class RepeatTagToken(AbstractIterationTagToken):
 		block = content
 		for counter in reversed(counters):
 			block = iteration.IterationBlock(counter, block)
-		
-		context.append_block(block)
+
+		return block
