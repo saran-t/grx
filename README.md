@@ -24,30 +24,14 @@ where the list of arguments may be omitted if the tag doesn't require it.
 
 - For now, as *grx* doesn't parse anything that's not part of its control structure, `@tag[[x[y]]]` appears to the system as
 
-`@tag` `[[` first parameter `x[y` `]]` followed by the string `"]"`
+`@tag` `[[` first parameter `"x[y"` `]]` followed by the string `"]"`
 
 
 - Likewise, commas could prove problematic, as `@tag[[f(x,y), z]]` appears as
 
-`@tag` `[[` first parameter `f(x` `,` second parameter `y)` `,` third parameter `z` `]]`
+`@tag` `[[` first parameter `"f(x"` `,` second parameter `"y)"` `,` third parameter `" z"` `]]`
 
 - Both of these issues can be rectified also inspecting various kinds of brackets in the parameter list. This somewhat violates the "no knowledge of underlying language" principle, but may well be required for usability. (The alternative would be, for example, to use `~` or `$` instead of `,` or `[[`, but I think that is horrendous syntax)
-
-### Variables
-
-In general, a macro processor looks for certain tokens in the text and replaces them by the value of the variables previously defined. In grx, these tokens take the form
-
-```
-`var`
-```
-
-or if multiple variables are to be concatenated
-
-```
-`var_1`var_2`var_3`
-```
-
-In general, the system looks for strings between pairs of `` `...` `` and checks whether it matches a variable name. If not it will leave the whole thing alone, including the `` ` ``. At the time there is no way to generically define a variable in *grx*, but rather variables get defined in iteration structures (see `@iterate`)
 
 ### Array expansion
 
@@ -62,4 +46,20 @@ The system would generate the correct multidim-array syntax for the correspondin
 - In C, surround **each copy** of the inner string by `[...]` and replace the `#` by numbers in **descending** order.
 - In Fortran, append a comma to **each copy** *apart from the last one*, run `#` in **ascending** order, then surround the **whole thing** by `(...)`
 
-In general, any `[[...]]` which does **not** immediately follow an `@tag` is treated as an array expansion. Again the `#` may potentially collide with C preprocessor directive, but I hardly think that is a likely occurrence inside array indexes.
+In general, any `[[...]]` which does **not** immediately follow an `@tag` is treated as an array expansion. Again the `#` may potentially collide with C preprocessor directives, but I hardly think that is a likely occurrence inside array indexes.
+
+### Variables
+
+At the end of the day, *grx* is a glorified macro substitution engine, and so it needs some sort of token in the text to be replaced by value of some variables. In grx, these tokens take the form
+
+```
+`var`
+```
+
+or if multiple variables are to be concatenated
+
+```
+`var_1`var_2`var_3`
+```
+
+In general, the system looks for strings between pairs of `` `...` `` and checks whether it matches a variable name. If not it will leave the whole thing alone, including the `` ` ``. At the time there is no way to generically define a variable in *grx*, but rather variables get defined in iteration structures (see `@iterate`)
