@@ -24,8 +24,11 @@ class ArrayExpandToken(tag.expand.AbstractExpandToken):
 	def parse(self, context):
 		(counter, raw_content) = tag.expand.AbstractExpandToken.parse(self, context)
 
-		# C array indexing goes backwards!
-		(counter.start, counter.end, counter.stride) = (counter.end, counter.start, -1)
+		if not hasattr(context, 'language') or context.language.upper() == 'C':
+			# C array indexing goes backwards!
+			(counter.start, counter.end, counter.stride) = (counter.end, counter.start, -1)
+		else:
+			raise Exception("unknown language " + context.language.upper())
 
 		content = parser.BlockSequence([open_bracket_block, raw_content, close_bracket_block])
 		context.append_block(iteration.IterationBlock(counter, content))
