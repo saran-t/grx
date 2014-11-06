@@ -417,18 +417,145 @@ produces
 
 # Differentiation
 
+Writing finite differences code in multiple dimensions is often prone to errors. Higher order differentiation is even more problematic as a different stencils must be used for repeated partials and mixed partials. *grx* provides a number of macros to help in this area.
+
 #### `@stencil`
+
+### Syntax
+	
+	@stencil[[ stencilname ]]
+		@points[[  point0,  ..., pointN  ]]
+		@weights[[ weight0, ..., weightN ]]
+	@end[[ stencil ]]
+
+#### Arguments
+
+- `stencilname` is a valid variable name, to be used as the name of this stencil
+- `point#` is any string
+- `weight#` is any string
+
+#### Explanation
+
+Defines a stencil with the name `stencilname`, to be used by derivative code generation macros. The stencil assigns the weight `weight#` to the point shifted by `point#` from the current location. Both `@points` and `@weights`, with the same number of arguments, are required for the `@stencil` block to be valid. Note that the arguments of `@points` and `@weights` are reproduced verbatim: *grx* will not convert them to integers or floating points or anything else. This tag does not produce any text in the output.
+
+#### Example 1
+
+1<sup>st</sup> derivative using 4<sup>th</sup> order central difference:
+	
+	@stencil[[d1cen4]]
+		@points[[  -2,    -1,     1,     2      ]]
+		@weights[[ 1/12., -8/12., 8/12., -1/12. ]]
+	@end
+
+Note that we have to add trailing dots to the weights in order to make sure that floating point division is used, otherwise the C/Fortran compiler will treat them as zeroes!
+
+#### Example 2
+
+2<sup>nd</sup> derivative using 4<sup>th</sup> order central difference:
+	
+	@stencil[[d2cen4]]
+		@points[[  -2,     -1,     0,       1,      2      ]]
+		@weights[[ -1/12., 16/12., -30/12., 16/12., -1/12. ]]
+	@end
 
 ---
 
 #### `@d1`
 
+### Syntax
+	
+	@d1[[ f, i, stencil ]]
+
+#### Arguments
+
+- `f` is any string, typically containing an `[[...]]` array expansion token
+- `i` is either a non-negative integer or a previously declared numerical variable
+- `stencil` is the name of a previously defined `@stencil`
+
+#### Explanation
+
+Generates code for the first derivative ∂f/∂x<sup>i</sup>, using the stencil defined by `stencil`. Plenty of parentheses are around everything in the process in order to ensure that minus signs, etc. are translated correctly. I could explain exactly what the macro does, but it's probably easier to just look at the examples.
+
+#### Example 1
+
+Differentiating a scalar function using the stencil `d1cen4` from Example 1 for `@stencil`:
+	
+	const double f[x3size][x2size][x1size];	// f is a scalar function
+	const double dx;	// dx is the grid spacing
+
+	@iterate[[ i ]]
+		const double df`i = @d1[[ f[[x#]], i, d1cen4 ]] / dx;
+	@end
+
+produces
+	
+	const double df1 = ((1/12.) * (f[(x3)][(x2)][(x1) + (-2)]) + (-8/12.) * (f[(x3)][(x2)][(x1) + (-1)]) + (8/12.) * (f[(x3)][(x2)][(x1) + (1)]) + (-1/12.) * (f[(x3)][(x2)][(x1) + (2)])) / dx;
+	const double df2 = ((1/12.) * (f[(x3)][(x2) + (-2)][(x1)]) + (-8/12.) * (f[(x3)][(x2) + (-1)][(x1)]) + (8/12.) * (f[(x3)][(x2) + (1)][(x1)]) + (-1/12.) * (f[(x3)][(x2) + (2)][(x1)])) / dx;
+	const double df3 = ((1/12.) * (f[(x3) + (-2)][(x2)][(x1)]) + (-8/12.) * (f[(x3) + (-1)][(x2)][(x1)]) + (8/12.) * (f[(x3) + (1)][(x2)][(x1)]) + (-1/12.) * (f[(x3) + (2)][(x2)][(x1)])) / dx;
+
+which, without the *"paranoid parantheses"*, is roughly equivalent to *(ignoring the quirks of rearranging floating point operations)*
+	
+	const double df1 = (f[x3][x2][x1-2] - 8. * f[x3][x2][x1-1] + 8. * f[x3][x2][x1+1] - f[x3][x2][x1+2]) / (12. * dx);
+	const double df2 = (f[x3][x2-2][x1] - 8. * f[x3][x2-1][x1] + 8. * f[x3][x2+1][x1] - f[x3][x2+2][x1]) / (12. * dx);
+	const double df3 = (f[x3-2][x2][x1] - 8. * f[x3-1][x2][x1] + 8. * f[x3+1][x2][x1] - f[x3+2][x2][x1]) / (12. * dx);
+
+#### Example 2
+
+We can similarly differentiate a tensor by using `@iterate` in the obvious way:
+	
+	@iterate[[ i, j=i.., k ]]
+		const double dg`i`j`k` = @d1[[ g`i`j`[[x#]] / dx, k, d1cen4 ]];
+		@define[[ dg`j`i`k`, dg`i`j`k` ]]
+	@end
+
+produces exactly what you think it should.
+
 ---
 
 #### `@d2`
 
+### Syntax
+	
+	@d2[[ f, i, j, stencil1, stencil2 ]]
 
-## Caveats
+#### Arguments
+
+- `f` is any string, typically containing an `[[...]]` array expansion token
+- `i` and `j` are either a non-negative integers or a previously declared numerical variables
+- `stencil1` and `stencil2` are the names of a previously defined `@stencil`
+
+#### Explanation
+
+Generates code for the second derivatives ∂<sup>2</sup>f/(∂x<sup>i</sup>∂x<sup>j</sup>). For mixed derivatives (i.e. off-diagonal terms in the Hessian) `stencil1` is used to calculate the first derivative in each direction, while for repeated derivatives (i.e. diagonal terms in the Hessian) `stencil2` is used to calculate the second derivative. Like `@d1` this macro produces plenty of parentheses.
+
+#### Example
+
+Differentiating a scalar function twice:
+	
+	@iterate[[ i, j=i.. ]]
+		const double ddf`i`j` = @d2[[ f[[x#]], i, j, d1cen4, d2cen4 ]] / (dx * dx);
+	@end
+
+produces parentheses-filled code which is equivalent to
+	
+	const double ddf11 = (
+		- f[x3][x2][x1-2] + 16. * f[x3][x2][x1-1] - 30. * f[x3][x2][x1] + 16. * f[x3][x2][x1+1] - f[x3][x2][x1+2]
+	) / (12. * dx * dx);
+	
+	const double ddf12 = (
+		       f[x3][x2-2][x1-2] -  8. * f[x3][x2-2][x1-1] +  8. * f[x3][x2-2][x1+1] -      f[x3][x2-2][x1+2]
+		- 8. * f[x3][x2-1][x2-2] + 64. * f[x3][x2-1][x1-1] - 64. * f[x3][x2-1][x1+1] + 8. * f[x3][x2-1][x1+2]
+		+ 8. * f[x3][x2+1][x2-2] - 64. * f[x3][x2+1][x1-1] + 64. * f[x3][x2+1][x1+1] - 8. * f[x3][x2+1][x1+2]
+		-	   f[x3][x2+2][x1-2] +  8. * f[x3][x2+2][x1-1] -  8. * f[x3][x2+2][x1+1] +      f[x3][x2+2][x1+2]
+	) / (144. * dx * dx);
+
+	and so on...
+
+Check out the example for `@d1` to see exactly how *grx* inserts parentheses into derivative expressions.
+
+---
+
+## General caveats
 
 Here is a list of things which may cause unexpected behaviour in *grx*. I hope to fix most of these once I figure out a good solution for them.
 
