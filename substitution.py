@@ -55,8 +55,7 @@ class SubstitutionEnvironment(object):
 		if match == replace:
 			return (None, None)
 
-		elif match in self.dict:
-			print self.dict
+		elif match in self.dict and self.dict[match] != replace:
 			raise Exception(match + ' has already been @defined')
 		
 		else:

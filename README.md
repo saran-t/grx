@@ -349,7 +349,7 @@ At the moment, *grx* emits `#define` pragmas rather than actually performing str
 
 #### Explanation
 
-When used inside a `@definescope`, emits `#define match replace` in the generated code. If `match` is identical to `replace` then it does nothing at all. An error is thrown if `match` already appeared in another `@define` in the same scope.
+When used inside a `@definescope`, emits `#define match replace` in the generated code. If `match` is identical to `replace` then it does nothing at all.
 
 #### Example
 
