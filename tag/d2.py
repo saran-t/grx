@@ -3,6 +3,7 @@ import parser
 import text
 import num
 import d1
+from stencil import StencilDefinition
 
 def token_class():
 	return D1TagToken
@@ -16,33 +17,31 @@ class D1TagToken(tag.TagToken):
 			raise Exception("@d2 expects exactly 5 arguments")
 
 		else:
-			# read first derivative operator index
+			# read derivative operator indices
 			try:
-				d1indexstring = text.PlainStringContext(self.args[1], context).parse()
-				d1index = num.fromstring(d1indexstring, context)
+				d1indexstring = text.PlainStringContext(self.args[1], context).parse().strip()
+				d2indexstring = text.PlainStringContext(self.args[2], context).parse().strip()
 			except Exception, e:
-				raise Exception("first derivative component index is not a numerical value")
+				raise Exception("invalid derivative index")
 
-			# read second derivative operator index
-			try:
-				d2indexstring = text.PlainStringContext(self.args[2], context).parse()
-				d2index = num.fromstring(d2indexstring, context)
-			except Exception, e:
-				raise Exception("second derivative component index is not a numerical value")
+			d1index = num.fromstring(d1indexstring, context)
+			d2index = num.fromstring(d1indexstring, context)
 
 			# read d1stencil name
 			try:
-				d1stencilname = text.PlainStringContext(self.args[3], context).parse()
-				d1stencil = context.getvar(d1stencilname)
+				d1stencilname = text.PlainStringContext(self.args[3], context).parse().strip()
+				d2stencilname = text.PlainStringContext(self.args[4], context).parse().strip()
+				
 			except Exception, e:
-				raise Exception("invalid or undefined name for first derivative stencil")
+				raise Exception("invalid stencil name")
 
-			# read d2stencil name
-			try:
-				d2stencilname = text.PlainStringContext(self.args[4], context).parse()
-				d2stencil = context.getvar(d2stencilname)
-			except Exception, e:
-				raise Exception("invalid or undefined name for second derivative stencil")
+			d1stencil = context.getvar(d1stencilname)
+			if not isinstance(d1stencil, StencilDefinition):
+				raise ValueError("'" + d1stencilname + "' is not a @stencil")
+
+			d2stencil = context.getvar(d2stencilname)
+			if not isinstance(d2stencil, StencilDefinition):
+				raise ValueError("'" + d2stencilname + "' is not a @stencil")
 
 			stencils = [d1stencil, d2stencil]
 			dindices = [d1index, d2index]

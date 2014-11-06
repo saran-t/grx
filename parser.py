@@ -2,7 +2,7 @@ import traceback
 import re
 
 iterator_stack = []
-
+verbose_error = False
 valid_varname = re.compile(r"[a-zA-Z_]\w*");
 
 def parse(tokens):
@@ -11,7 +11,9 @@ def parse(tokens):
 		return context.parse()
 	
 	except Exception, e:
-		print traceback.format_exc()
+		if verbose_error:
+			print traceback.format_exc()
+
 		token = iterator_stack[-1].current()
 		raise Exception('Error: ' + str(token.line) + ':' + str(token.char) + ': ' + str(e.message))
 	

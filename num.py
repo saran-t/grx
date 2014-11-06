@@ -13,9 +13,12 @@ class ConstantNumber(AbstractNumber):
 
 	@staticmethod	
 	def getinstance(value):
-		value_int = int(value)
-		if value_int < 0:
-			raise ValueError
+		try:
+			value_int = int(value)
+			if value_int < 0:
+				raise ValueError
+		except ValueError:
+			raise ValueError("'" + value + "' is not valid number literal")
 
 		if not (value_int in ConstantNumber.singletons):
 			ConstantNumber.singletons[value_int] = ConstantNumber(value_int)
@@ -37,9 +40,9 @@ def fromstring(string, context):
 
 	if num is None:
 		# failing that try it as an integer literal
-		try:
-			num = ConstantNumber.getinstance(string)
-		except ValueError:
-			raise Exception("'" + string + "' does not represent a numerical value")
+		num = ConstantNumber.getinstance(string)
+
+	if not isinstance(num, AbstractNumber):
+		raise ValueError("'" + string + "' is not a numerical variable")
 
 	return num

@@ -2,7 +2,9 @@
 
 *grx* is a macro processor, primarily intended to ease the writing of good code for General Relativity simulations. These numerical tensor codes are very heavy on indices, leading to rather messy code which is often not amenable to straightforward compiler optimization without causing even further mess.
 
-To demonstrate the point, let us consider writing code to calculate the spatial Christoffel symbols in C99:
+In order to process `inputfile` using *grx*, issue `python grx.py [inputfile] > [outputfile]` at the command prompt. There are no command line options right now.
+
+To demonstrate the point of *grx*, let us consider writing code to calculate the spatial Christoffel symbols in C99:
 	
 	#define DIM 3
 	double Gamma[DIM][DIM][DIM];
@@ -25,7 +27,7 @@ To demonstrate the point, let us consider writing code to calculate the spatial 
 		}
 	}
 
-A few noteworthy issues here include:
+A few issues with this code include:
 	
 - Tensors have indices that range up to #(spacetime dimensions) *by default*, yet we have to explicitly state this at every loop. 
 
@@ -127,8 +129,7 @@ Unless stated otherwise, our examples assume that we are working with 3+1 GR so 
 
 #### Arguments
 
-- `min` is a non-negative integer
-- `max` is a non-negative integer
+- `min` and `max` are non-negative integers
 
 #### Explanation	
 	

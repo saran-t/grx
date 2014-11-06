@@ -3,6 +3,7 @@ import parser
 import text
 import arrayexpand
 import num
+from stencil import StencilDefinition
 
 def token_class():
 	return D1TagToken
@@ -19,17 +20,23 @@ class D1TagToken(tag.TagToken):
 
 			# read derivative operator index
 			try:
-				d1indexstring = text.PlainStringContext(self.args[1], context).parse()
-				d1index = num.fromstring(d1indexstring, context)
+				d1indexstring = text.PlainStringContext(self.args[1], context).parse().strip()
 			except Exception, e:
-				raise Exception("derivative component index is not a numerical value")
+				raise Exception("invalid derivative index")
+
+			d1index = num.fromstring(d1indexstring, context)
 
 			# read stencil name
 			try:
-				d1stencilname = text.PlainStringContext(self.args[2], context).parse()
-				d1stencil = context.getvar(d1stencilname)
+				d1stencilname = text.PlainStringContext(self.args[2], context).parse().strip()
 			except Exception, e:
-				raise Exception("invalid or undefined stencil name")
+				raise Exception("invalid stencil name")
+
+			d1stencil = context.getvar(d1stencilname)
+			if not isinstance(d1stencil, StencilDefinition):
+				raise ValueError("'" + d1stencilname + "' is not a @stencil")
+
+			
 
 			stencils = [d1stencil]
 			dindices = [d1index]

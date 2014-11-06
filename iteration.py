@@ -91,7 +91,7 @@ class RangeSpecContext(text.PlainStringContext):
 			try:
 				start = context.defaultrange[0]
 			except AttributeError:
-				raise Exception("start value omitted, but no @defaultrange defined")
+				raise Exception("range start value omitted, but no @defaultrange defined")
 		
 
 		if m.group(3) is not None:
@@ -101,7 +101,7 @@ class RangeSpecContext(text.PlainStringContext):
 			try:
 				end = context.defaultrange[1]
 			except ValueError:
-				raise Exception("end value omitted, but no @defaultrange defined")
+				raise Exception("range end value omitted, but no @defaultrange defined")
 
 
 		return RangeSpec(name, IterationCounter(start, end))
