@@ -1,6 +1,6 @@
 # GReXtension
 
-*grx* is a macro processor, primarily intended to ease the process of writing good code for General Relativity simulations. These numerical tensor codes are very heavy on indices, leading to rather messy code which is often not amenable to straightforward compiler optimization without causing even further mess.
+*grx* is a macro processor, primarily intended to ease the writing of good code for General Relativity simulations. These numerical tensor codes are very heavy on indices, leading to rather messy code which is often not amenable to straightforward compiler optimization without causing even further mess.
 
 To demonstrate the point, let us consider writing code to calculate the spatial Christoffel symbols in C99:
 	
@@ -31,18 +31,18 @@ A few noteworthy issues here include:
 
 - In all likelihood, such a loop appears inside a larger, outer loop ranging over the grid points in our domain. This outer loop should really be vectorizable by the compiler. By declaring `Gamma` as an array, the compiler is unlikely to fully vectorize the calculations. If we declare and calculate each component as a separate variable, the code would become trivially vectorizable.
 
-- Just because we have assigned `Gamma[i][k][j] = Gamma[i][j][k]` does not mean that the compiler necessarily realises that these are the same quantity. Ideally we want to `#define` these two components in order to make the symmetry explicit, however we cannot loop over `#define`.
+- Just because we have assigned `Gamma[i][k][j] = Gamma[i][j][k]` does not mean that the compiler necessarily realises that these are the same quantity. Ideally we want to `#define` these two components in order to make the symmetry explicit, however we cannot do this in the loop.
 
-- We could manually write out the calculation of each component and the `#define`. We might then want to `#undef` everything at the end of the function to prevent unexpected collisions elsewhere. This is obviously prone to human error and it will be impossible to change or maintain the resulting code.
+- We could manually write out the calculation of each component and all the `#define`. We would then want to `#undef` everything at the end of the function as well for safety. This is obviously prone to human error and it will be impossible to change or maintain the resulting code.
 
 - All of the above points get amplified when we realise that the loop written above is just one of many that occurs in real simulation code.
 
-- Then there is the calculation of finite difference derivatives of 10 tensors. With up to four stencils each. And we are working in 11 dimensions.
+- Then there is the calculation of finite difference derivatives of 10 tensors. With up to four stencils each. In 11 dimensions.
 
 Using *grx* we can produce readable code with all of these improvements:
 
-	@definescope
 	@defaultrange[[1,3]]
+	@definescope
 
 	@iterate[[i, j, k=j..]]
 		const double Gamma`i`j`k` = 0.5 * @sum[[l]] ginv`i`l` * (dg`j`l`k` + dg`k`l`j` - dg`j`k`l`) @end;
@@ -56,7 +56,7 @@ Using *grx* we can produce readable code with all of these improvements:
 
 As far as possible, *grx* is designed to not collide with the syntax of languages commonly used in the field (for now this means C, C++ and Fortran). Unfortunately, this cannot be 100% achieved, as there are only so many keys on the keyboard, and the most of the remaining ones would result in strange and unsightly syntax. Ideally, the system should also require no knowledge whatsoever of the underlying language: it should just treat anything which is not part of its own syntax as simple blobs of text. 
 
-*grx* is conceptually inspired by **ChomboFortran**, which aims to help people write dimension-independent Fortran code. *grx* extends this concept further by introducing more general macro directives and also removes the specific dependence on Fortran.
+*grx* is conceptually inspired by **Chombo Fortran**, which aims to help people write dimension-independent Fortran code. *grx* extends this concept further by introducing more general macro directives and also removes the specific dependence on Fortran.
 
 ### Tags
 
@@ -75,7 +75,7 @@ The main control directive used in *grx* is of the form
 
 	are both valid. In the latter case, the parser would throw an error if the names don't match, providing an extra layer of safety. This is recommended when the block spans a large number of lines.
 
-- According to Wikipedia, our use of `@` makes *grx* incompatible with Objective-C, Swift, Ruby, Python, Java, C#, Haskell, and many other languages. This is unfortunate, however it does mean that search engines could pick up so many keywords from the above list.
+- According to Wikipedia, our use of `@` makes *grx* incompatible with Objective-C, Swift, Ruby, Python, Java, C#, Haskell, and many other languages. This is unfortunate, however it does mean that search engines might pick up keywords from the above list.
 
 ### Array expansions
 
@@ -132,7 +132,13 @@ Unless stated otherwise, our examples assume that we are working with 3+1 GR so 
 
 #### Explanation	
 	
-Sets the range for `[[...]]` array expansions, and also the default range used in a `rangespec` (see `@iterate` below).
+Sets the iteration range which is used by default, unless otherwise overridden by a `rangespec` (see `@iterate`).
+
+#### Example
+
+For 3+1 GR, the canonical choice for spatial quantities would be:
+
+	@defaultrange[[1, 3]]
 
 ---
 
@@ -148,15 +154,15 @@ and
 
 #### Arguments
 
-- `some_text` is any string. Specially for these tags any `,` is treated as part of the string and **not** argument list delimiter.
+- `some_text` is any string.
 
 #### Explanation
 
-The simplest iteration macro in *grx*: `some_text` gets repeated verbatim, except that each time any `#` that appears in `some_text` is replaced by a number which is incremented (for `@expand`) or decremented (for `@rexpand` i.e. *reversed expand*) according to `@defaultrange`.
+The simplest iteration macro in *grx*: `some_text` is repeated verbatim, except each time any `#` that appears in `some_text` is replaced by a number which is incremented (for `@expand`) or decremented (for `@rexpand` i.e. *reversed expand*) according to `@defaultrange`.
 
 #### Example 1
 
-Expanding out lower and upper bound variables for a 3D array:
+Expanding out lower and upper bound variables for a 3D array -- the horrible way:
 	
 	void f(const double *input @expand[[, int min#]] , @expand[[int max#, ]] double *output);
 
@@ -166,9 +172,55 @@ produces
 
 Take note of the various peculiar ways in which `,` appear here: *grx* doesn't know what you're trying to do, it just repeats things literally!
 
+In fact, for this particular example we should have used `@argexpand` (see below).
+
 #### Example 2
 
-A for-loop is a typical use case scenario for the reversed expand:
+A for-loop is a typical use case for reversed expansion:
+
+	@rexpand[[ for (int x# = 0; x# < len#; x#++) { ]]
+		some_code
+	@expand[[ } ]]
+
+produces
+
+	for (int x3 = 0; x3 < len3; x3++) {
+		for (int x2 = 0; x2 < len2; x2++) {
+			for (int x1 = 0; x1 < len1; x1++) {
+				some_code
+			}
+		}
+	}
+
+---
+
+### `@argexpand`
+
+#### Syntax
+	
+	@argexpand[[ some_text ]]
+
+#### Arguments
+
+- `some_text` is any string.
+
+#### Explanation
+
+Like `@expand` but also inserts `,` *between* copies of `some_text`. Intended for use in function arguments.
+
+#### Example
+
+We can rewrite Example 1 for `@expand` in a more sensible manner:
+	
+	void f(const double *input, @argexpand[[int min#]], @argexpand[[int max#]], double *output);
+
+also produces
+
+	void f(const double *input, int min1, int min2, int min3, int max1, int max2, int max3, double *output);
+
+#### Example 2
+
+A for-loop is a typical use case for reversed expansion:
 
 	@rexpand[[ for (int x# = 0; x# < len#; x#++) { ]]
 		some_code
@@ -212,7 +264,7 @@ where:
 
 #### Explanation
 
-The main iteration macro in *grx* which offers much greater control than `@expand`. It repeats `block_of_text` according to the specified `range#`. Where multiple `range#` are specified, `@iterate` behaves like a nested loop.
+The main iteration macro in *grx* which is much more flexible than `@expand`. It repeats `block_of_text` according to the specified `range#`. Where multiple `range#` are specified, `@iterate` behaves like a nested loop.
 
 #### Example
 
@@ -258,9 +310,7 @@ which produces
 Does everything that `@iterate` does, but also:
 
 - Inserts `(...)` around **each copy** of `block_of_text`
-
 - Inserts a `+` in between each copy
-
 - Surrounds the **entire output** by another pair of `(...)`
 
 This means that we can *safely* generate a summation expression without having to worry about the parentheses.
@@ -299,7 +349,7 @@ At the moment, *grx* emits `#define` pragmas rather than actually performing str
 
 #### Explanation
 
-When used inside a `@definescope`, emits `#define match replace` in the generated code. If `match` is identical to `replace` then it does nothing at all.
+When used inside a `@definescope`, emits `#define match replace` in the generated code. If `match` is identical to `replace` then it does nothing at all. An error is thrown if `match` already appeared in another `@define` in the same scope.
 
 #### Example
 
@@ -335,7 +385,7 @@ Take care with commas appearing inside the arguments. At the moment `@define[[f(
 
 #### Explanation
 
-Declares `block_of_text` to be within a `@definescope`. Each `@define` used within `block_of_text` will be logged internally, and at the `@end` it will emit an `#undef` for each `#define`. 
+Declares `block_of_text` to be within a `@definescope`. Each `@define` used within `block_of_text` is logged internally, and at the `@end` it will emit an `#undef` for each `#define`. 
 
 #### Example
 
@@ -392,6 +442,8 @@ Here is a list of things which may cause unexpected behaviour in *grx*. I hope t
 	Likewise, commas could prove problematic, as `@tag[[f(x,y), z]]` appears as
 
 	`@tag` `[[` first parameter `"f(x"` `,` second parameter `"y)"` `,` third parameter `" z"` `]]`
+
+	The "comma problem" does not apply to `@expand`, `@rexpand` and `@argexpand` as these tags are programmed specifically to ignore `,`.
 
 - Both of these issues can be fixed by also inspecting various kinds of brackets in the parameter list. This somewhat violates the "no knowledge of underlying language" principle, but may well be required for usability. (The alternative would be, for example, to use `~` or `$` instead of `,` or `[[`, but I think that is taking things a little too far)
 

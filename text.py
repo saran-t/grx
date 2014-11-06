@@ -10,20 +10,6 @@ def blockify(content):
 		return TextBlock(content)
 
 
-class PlainStringContext(parser.ParsingContext):
-
-	def parse_all(self):
-		text = ''
-
-		for token in self.tokens_iterator:
-			if not isinstance(token, TextToken):
-				raise Exception('not a plain string')
-			else:
-				text = text + token.text
-
-		return text
-
-
 class TextToken(lexer.AbstractToken):
 
 	split_char = '`'
@@ -59,7 +45,6 @@ class TextToken(lexer.AbstractToken):
 
 
 class TextBlock(parser.AbstractBlock):
-	content = ''
 
 	def __init__(self, content):
 		self.content = str(content)
@@ -71,3 +56,16 @@ class TextBlock(parser.AbstractBlock):
 	def execute(self):
 		return self.content
 
+
+class PlainStringContext(parser.ParsingContext):
+
+	def parse_all(self):
+		text = ''
+
+		for token in self.tokens_iterator:
+			if not isinstance(token, TextToken):
+				raise Exception('not a plain string')
+			else:
+				text = text + token.text
+
+		return text

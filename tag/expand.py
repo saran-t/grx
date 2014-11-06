@@ -19,7 +19,7 @@ class AbstractExpandToken(lexer.AbstractToken):
 
 		counter = iteration.IterationCounter(start, end)
 
-		inner_context = SimpleExpansionContext(self.content, context)
+		inner_context = SimpleExpansionContext(self._rawcontent, context)
 		inner_context.declare(counter.uniquename(), counter)
 		inner_context.countername = counter.uniquename()
 
@@ -46,7 +46,7 @@ class ExpandTagToken(tag.TagToken, AbstractExpandToken):
 		if len(self.args) != 1:
 			raise Exception("@expand expects exactly one argument")
 		else:
-			self.content = self.args[0]
+			self._rawcontent = self.args[0]
 
 		(counter, content) = AbstractExpandToken.parse(self, context)
 		return iteration.IterationBlock(counter, content)

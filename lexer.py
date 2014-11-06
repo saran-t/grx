@@ -4,8 +4,10 @@ def lex(string):
 	lexer = Lexer(string, start_line = 1, start_char = 1)
 	return lexer.lex()
 
+
 class AbstractToken(object):
 	pass
+
 
 class TokenSequence(AbstractToken):
 	def __init__(self, tokens):

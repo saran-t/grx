@@ -1,11 +1,12 @@
 import parser
 import text
 import re
+import num
 
 # Produces <before> <content_0> [<content_i> <between>] <content_n> <after>
 class IterationBlock(parser.AbstractBlock):
 
-	def __init__(self, counter, content, before = '', between = '', after = ''):
+	def __init__(self, counter, content, before = '', between = '', after = '', formatstring = '%s'):
 		self.counter = counter
 		self.content = content
 
@@ -13,13 +14,15 @@ class IterationBlock(parser.AbstractBlock):
 		self.between = text.blockify(between)
 		self.after = text.blockify(after)
 
+		self.formatstring = formatstring
+
 	def execute(self):
 		output = ''
 
 		output = output + self.before.execute()
 
 		for i in self.counter:
-			output = output + self.content.execute()
+			output = output + (self.formatstring % self.content.execute())
 
 			if self.counter.hasnext():
 				output = output + self.between.execute()
@@ -27,50 +30,17 @@ class IterationBlock(parser.AbstractBlock):
 		output = output + self.after.execute()
 		return output
 
-
-class IterationConstant(parser.AbstractVariable):
-
-	singletons = {}
-
-	def __init__(self, value):
-		self._value = value;
-
-	@staticmethod	
-	def get(value):
-		value_int = int(value)
-		if value_int < 0:
-			raise ValueError
-
-		if not (value_int in IterationConstant.singletons):
-			IterationConstant.singletons[value_int] = IterationConstant(value_int)
-
-		return IterationConstant.singletons[value_int]
-
-	def value(self):
-		return self._value
-
-	def execute(self):
-		return str(self._value)
-
-
-class IterationCounter(parser.AbstractVariable):
+class IterationCounter(num.AbstractNumber):
 
 	def __init__(self, start, end, stride = 1):
 		self.active = False
 
-		if isinstance(start, parser.AbstractVariable):
-			self.start = start
-		else:
-			self.start = IterationConstant.get(start)
-
-		if isinstance(end, parser.AbstractVariable):
-			self.end = end
-		else:
-			self.end = IterationConstant.get(end)
+		self.start = start
+		self.end = end
 
 		self.stride = stride
 
-	def value(self):
+	def numvalue(self):
 		return self._value
 
 	def __iter__(self):
@@ -78,15 +48,15 @@ class IterationCounter(parser.AbstractVariable):
 			raise Exception(repr(self) + " this iteration counter is already active")
 		else:
 			self.active = True
-			self._value = self.start.value() - self.stride
+			self._value = self.start.numvalue() - self.stride
 			return self
 
 	def hasnext(self):
-		return self._value < self.end.value()
+		return self._value < self.end.numvalue()
 
 	def next(self):
 		self._value = self._value + self.stride
-		if (self.stride > 0 and self._value <= self.end.value()) or (self.stride < 0 and self._value >= self.end.value()):
+		if (self.stride > 0 and self._value <= self.end.numvalue()) or (self.stride < 0 and self._value >= self.end.numvalue()):
 			return self._value
 		else:
 			self.active = False
@@ -115,35 +85,21 @@ class RangeSpecContext(text.PlainStringContext):
 		name = m.group(1)
 
 		if m.group(2) is not None:
-			# try interpreting as a variable name first
-			start = context.getvar(m.group(2))
-			if start is None:
-				# failing that try it as an integer literal
-				try:
-					start = IterationConstant.get(m.group(2))
-				except ValueError:
-					raise Exception("'" + m.group(2) + "' is not declared in this context")
+			start = num.fromstring(m.group(2), context)
 		else:
 			# no start value, try default
 			try:
-				start = IterationConstant.get(context.defaultrange[0])
-			except ValueError:
+				start = context.defaultrange[0]
+			except AttributeError:
 				raise Exception("start value omitted, but no @defaultrange defined")
 		
 
 		if m.group(3) is not None:
-			# try interpreting as a variable name first
-			end = context.getvar(m.group(3))
-			if end is None:
-				# failing that try it as an integer literal
-				try:
-					end = IterationConstant.get(m.group(3))
-				except ValueError:
-					raise Exception("'" + m.group(3) + "' is not declared in this context")
+			end = num.fromstring(m.group(3), context)
 		else:
 			# no end value, try default
 			try:
-				end = IterationConstant.get(context.defaultrange[1])
+				end = context.defaultrange[1]
 			except ValueError:
 				raise Exception("end value omitted, but no @defaultrange defined")
 

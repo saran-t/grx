@@ -1,6 +1,9 @@
 import traceback
+import re
 
 iterator_stack = []
+
+valid_varname = re.compile(r"[a-zA-Z_]\w*");
 
 def parse(tokens):
 	try:
@@ -12,11 +15,6 @@ def parse(tokens):
 		token = iterator_stack[-1].current()
 		raise Exception('Error: ' + str(token.line) + ':' + str(token.char) + ': ' + str(e.message))
 	
-
-class AbstractVariable(object):
-	def uniquename(self):
-		return '$' + str(id(self))
-
 
 class AbstractBlock(object):
 	pass
@@ -36,6 +34,11 @@ class BlockSequence(AbstractBlock):
 		return output
 
 
+class AbstractVariable(object):
+	def uniquename(self):
+		return '$' + str(id(self))
+
+
 class ParsingContext(object):
 
 	def __init__(self, tokens, parent = None):
@@ -49,9 +52,9 @@ class ParsingContext(object):
 
 	def getvar(self, varname):
 		if varname in self._localvars:
-			return self._localvars[varname]
+			return self._localvars[varname.strip()]
 		elif self.parent is not None:
-			return self.parent.getvar(varname)
+			return self.parent.getvar(varname.strip())
 		else:
 			return None
 
@@ -59,7 +62,7 @@ class ParsingContext(object):
 		if self.getvar(varname) is None:
 			self._localvars[varname] = varobj
 		else:
-			raise Exception(varname + " is already declared in this context")
+			raise Exception("the name '" + varname + "' is already declared in this context")
 
 	def __getattribute__(self, name):
 		try:
@@ -89,7 +92,7 @@ class ParsingContext(object):
 		for token in self.tokens_iterator:
 			try:
 				block = self.parse_token(token)
-				if block is not None:
+				if isinstance(block, AbstractBlock):
 					self._blocks.append(block)
 			except LeaveContext:
 				break

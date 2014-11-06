@@ -3,18 +3,14 @@ import parser
 import text
 import iteration
 
-open_bracket_block = text.TextBlock('[')
-close_bracket_block = text.TextBlock(']')
-
-
 class ArrayExpandToken(tag.expand.AbstractExpandToken):
 	def __init__(self, line, char, content):
 		self.line = line
 		self.char = char
-		self.content = content
+		self._rawcontent = content
 
 	def __repr__(self):
-		return '<[[' + repr(self.content) + ']]>'
+		return '<[[' + repr(self._rawcontent) + ']]>'
 
 	def print_debug(self, prefix = ''):
 		print repr(self.line) + ':' + repr(self.char) + ':\t' + prefix + '[[ ArrayExpandToken ]]'
@@ -22,14 +18,18 @@ class ArrayExpandToken(tag.expand.AbstractExpandToken):
 			token.print_debug(prefix.strip() + '>>>> ')
 
 	def parse(self, context):
-		(counter, raw_content) = tag.expand.AbstractExpandToken.parse(self, context)
+		(counter, content) = tag.expand.AbstractExpandToken.parse(self, context)
 
 		if not hasattr(context, 'language') or context.language.upper() == 'C':
 			# C array indexing goes backwards!
 			(counter.start, counter.end, counter.stride) = (counter.end, counter.start, -1)
+			return iteration.IterationBlock(counter, content, formatstring = '[%s]')
+
+		elif context.language.upper() == 'F':
+			return iteration.IterationBlock(counter, content, before = '(', between = ',', after = ')')
+			
 		else:
 			raise Exception("unknown language " + context.language.upper())
 
-		content = parser.BlockSequence([open_bracket_block, raw_content, close_bracket_block])
-		context.append_block(iteration.IterationBlock(counter, content))
+		
 
