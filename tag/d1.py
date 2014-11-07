@@ -37,7 +37,6 @@ class D1TagToken(tag.TagToken):
 				raise ValueError("'" + d1stencilname + "' is not a @stencil")
 
 			
-
 			stencils = [d1stencil]
 			dindices = [d1index]
 
@@ -51,7 +50,6 @@ class D1TagToken(tag.TagToken):
 # exprblock means the parser block which holds the expression being differentiated
 
 class FirstDerivativeBlock(parser.AbstractBlock):
-
 
 	def __init__(self, stencils, dindices, dpointblocks, exprblock):
 		self.stencil = stencils[0]
@@ -101,6 +99,11 @@ class DerivativeDeltaBlock(parser.AbstractBlock):
 		from itertools import izip
 		for (dindex, dpointblock) in izip(self.dindices, self.dpointblocks):
 			if self.index_counter.numvalue() == dindex.numvalue():
-				return ' + (' + dpointblock.execute() + ')'
+				# TODO: fix this temporary hack!
+				rawstring = dpointblock.execute()
+				from string import join
+				return ' + (' + join(rawstring.split('#'), self.index_counter.execute()) + ')'
+				# end hack
+
 		return ''
 
