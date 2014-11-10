@@ -31,7 +31,7 @@ class DefinitionBlock(parser.AbstractBlock):
 			return ''
 		elif self.env.mode == Mode.PRAGMA:
 			if match and replace:
-				return '#define ' + match + ' ' + replace
+				return '\n#define ' + match + ' (' + replace + ')'
 			else:
 				return ''
 
@@ -64,7 +64,7 @@ class SubstitutionEnvironment(object):
 
 
 	def undef_string(self):
-		string = ''
+		string = '\n'
 		for match in self.dict:
 			string = string + '#undef ' + match + '\n'
 		return string
@@ -78,7 +78,7 @@ class SubstitutionEnvironment(object):
 
 		while not done and iterations < SubstitutionEnvironment.max_iteration:
 			for match in self.dict:
-				newstring = newstring.replace(match, self.dict[match])
+				newstring = newstring.replace(match, '(' + self.dict[match] + ')')
 
 			done = (newstring == oldstring)
 			oldstring = newstring

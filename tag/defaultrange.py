@@ -11,7 +11,12 @@ class DefaultRangeTagToken(tag.TagToken):
 		if len(self.args) != 2:
 			raise ValueError("@defaultrange takes exactly two arguments")
 
-		start = text.PlainStringContext(self.args[0], context).parse()
-		end = text.PlainStringContext(self.args[1], context).parse()
+		minval = text.PlainStringContext(self.args[0], context).parse()
+		maxval = text.PlainStringContext(self.args[1], context).parse()
 
-		context.defaultrange = [num.ConstantNumber.getinstance(start), num.ConstantNumber.getinstance(end)]
+		minvar = num.ConstantNumber.getinstance(minval)
+		maxvar = num.ConstantNumber.getinstance(maxval)
+
+		context.declare('RANGEMIN', minvar)
+		context.declare('RANGEMAX', maxvar)
+		context.defaultrange = [minvar, maxvar]

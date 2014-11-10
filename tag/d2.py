@@ -25,7 +25,7 @@ class D1TagToken(tag.TagToken):
 				raise Exception("invalid derivative index")
 
 			d1index = num.fromstring(d1indexstring, context)
-			d2index = num.fromstring(d1indexstring, context)
+			d2index = num.fromstring(d2indexstring, context)
 
 			# read d1stencil name
 			try:
@@ -67,7 +67,7 @@ class SecondDerivativeBlock(parser.AbstractBlock):
 
 		index1 = self.dindices[0].numvalue()
 		index2 = self.dindices[1].numvalue()
-
+		
 		if index1 == index2:
 			# diagonal, use second derivative stencil
 			for (point, weight) in self.stencils[1]:

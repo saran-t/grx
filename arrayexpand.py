@@ -20,16 +20,14 @@ class ArrayExpandToken(tag.expand.AbstractExpandToken):
 	def parse(self, context):
 		(counter, content) = tag.expand.AbstractExpandToken.parse(self, context)
 
-		if not hasattr(context, 'language') or context.language.upper() == 'C':
+		if not hasattr(context, 'arraysyntax'):
+			raise Exception("[[...]] array expansion used without a previously defined @arraysyntax")
+		elif context.arraysyntax == 'C':
 			# C array indexing goes backwards!
 			(counter.start, counter.end, counter.stride) = (counter.end, counter.start, -1)
 			return iteration.IterationBlock(counter, content, formatstring = '[%s]')
 
-		elif context.language.upper() == 'F':
+		elif context.arraysyntax == 'F':
 			return iteration.IterationBlock(counter, content, before = '(', between = ',', after = ')')
 			
-		else:
-			raise Exception("unknown language " + context.language.upper())
-
 		
-

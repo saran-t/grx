@@ -1,3 +1,4 @@
+import traceback
 import sys
 import lexer
 import parser
@@ -10,7 +11,7 @@ class GrxError(Exception):
 
 
 if len(sys.argv) == 1:
-	print "Usage: python grx.py [input file] > [output file]"
+	print "Usage: " + sys.argv[0].strip() + " [input file] > [output file]"
 
 else:
 	try:
@@ -19,4 +20,8 @@ else:
 		print blocks.execute()
 
 	except Exception, e:
-		print(e.message)
+		if not parser.verbose_error:
+			print e.message 
+		else:
+			print traceback.format_exc()
+			raise e
